@@ -41,7 +41,7 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="Ahmed Turki"
+          placeholder="Rima Zaghden"
         />
 
         <Text style={styles.label}>Email</Text>

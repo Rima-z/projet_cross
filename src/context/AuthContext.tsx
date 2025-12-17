@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../api/config';
 
 type User = {
   id: string;
@@ -16,45 +18,64 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const STORAGE_KEYS = {
+  token: 'auth.mysql.token',
+  currentUser: 'auth.mysql.currentUser',
+} as const;
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
-  // Stocker les utilisateurs inscrits (email -> User)
-  const [registeredUsers, setRegisteredUsers] = useState<Map<string, User>>(new Map());
 
-  const fakeDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEYS.currentUser);
+        if (raw) setUser(JSON.parse(raw) as User);
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const persistCurrentUser = async (nextUser: User | null) => {
+    setUser(nextUser);
+    try {
+      if (nextUser) await AsyncStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(nextUser));
+      else await AsyncStorage.removeItem(STORAGE_KEYS.currentUser);
+    } catch {
+      // ignore
+    }
+  };
+
+  const persistToken = async (token: string | null) => {
+    try {
+      if (token) await AsyncStorage.setItem(STORAGE_KEYS.token, token);
+      else await AsyncStorage.removeItem(STORAGE_KEYS.token);
+    } catch {
+      // ignore
+    }
+  };
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      await fakeDelay(800);
-      
-      // Vérifier si l'utilisateur est déjà inscrit
-      const registeredUser = registeredUsers.get(email.toLowerCase());
-      
-      if (registeredUser) {
-        // Utilisateur trouvé, utiliser son nom
-        setUser(registeredUser);
-      } else {
-        // Nouvel utilisateur, extraire le nom depuis l'email
-        const emailName = email.split('@')[0];
-        const capitalizedName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-        
-        const newUser: User = {
-          id: Date.now().toString(),
-          name: capitalizedName,
-          email: email.toLowerCase(),
-        };
-        
-        // Sauvegarder pour les prochaines connexions
-        setRegisteredUsers(prev => {
-          const newMap = new Map(prev);
-          newMap.set(email.toLowerCase(), newUser);
-          return newMap;
-        });
-        
-        setUser(newUser);
-      }
+      // IMPORTANT: reset session avant tentative
+      await persistCurrentUser(null);
+      await persistToken(null);
+
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // Backend renvoie 401 si compte inexistant => impossible de login sans signup
+      if (!res.ok) throw new Error(data?.message || 'Login failed');
+
+      await persistToken(data.token);
+      await persistCurrentUser(data.user);
     } finally {
       setLoading(false);
     }
@@ -63,29 +84,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (name: string, email: string, password: string) => {
     setLoading(true);
     try {
-      await fakeDelay(800);
-      
-      const newUser: User = {
-        id: Date.now().toString(),
-        name,
-        email: email.toLowerCase(),
-      };
-      
-      // Sauvegarder l'utilisateur inscrit
-      setRegisteredUsers(prev => {
-        const newMap = new Map(prev);
-        newMap.set(email.toLowerCase(), newUser);
-        return newMap;
+      await persistCurrentUser(null);
+      await persistToken(null);
+
+      const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
       });
-      
-      setUser(newUser);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || 'Signup failed');
+
+      await persistToken(data.token);
+      await persistCurrentUser(data.user);
     } finally {
       setLoading(false);
     }
   };
 
   const logout = () => {
-    setUser(null);
+    void persistCurrentUser(null);
+    void persistToken(null);
   };
 
   return (
@@ -97,10 +116,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 };
-
-

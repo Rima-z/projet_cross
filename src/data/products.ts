@@ -74,7 +74,7 @@ export const products: Coffee[] = [
     category: 'crepe',
   },
   {
-    id: '13',
+    id: '9',
     name: 'Crêpe Faires',
     price: 11000,
     image: require('../../assets/crepef.jpg'),
@@ -83,7 +83,7 @@ export const products: Coffee[] = [
   },
   // Produits Omelettes - Ajoutez vos images dans assets/
   {
-    id: '9',
+    id: '10',
     name: 'Omelette Nature',
     price: 8000,
     image: require('../../assets/oml.jpg'),
@@ -91,7 +91,7 @@ export const products: Coffee[] = [
     category: 'omelette',
   },
   {
-    id: '10',
+    id: '11',
     name: 'Omelette Thailandaise',
     price: 12000,
     image: require('../../assets/omlt.jpg'),
@@ -99,7 +99,7 @@ export const products: Coffee[] = [
     category: 'omelette',
   },
   {
-    id: '11',
+    id: '12',
     name: 'Omelette aux Epinards',
     price: 10000,
     image: require('../../assets/omle.jpg'),
@@ -107,7 +107,7 @@ export const products: Coffee[] = [
     category: 'omelette',
   },
   {
-    id: '12',
+    id: '13',
     name: 'Omelette Occidentale',
     price: 15000,
     image: require('../../assets/omlv.jpg'),
@@ -116,7 +116,7 @@ export const products: Coffee[] = [
   },
   // Produits boisson 
   {
-    id: '13',
+    id: '14',
     name: 'Eau 1.5L',
     price: 2500,
     image: require('../../assets/eau.jpg'),
@@ -124,7 +124,7 @@ export const products: Coffee[] = [
     category: 'boisson',
   },
   {
-    id: '14',
+    id: '15',
     name: 'Viva',
     price: 3000,
     image: require('../../assets/viva.jpg'),
@@ -132,7 +132,7 @@ export const products: Coffee[] = [
     category: 'boisson',
   },
   {
-    id: '15',
+    id: '16',
     name: 'Shark',
     price: 10000,
     image: require('../../assets/shark.jpg'),
@@ -140,7 +140,7 @@ export const products: Coffee[] = [
     category: 'boisson',
   },
   {
-    id: '15',
+    id: '17',
     name: 'Eau Gazéifiée',
     price: 15000,
     image: require('../../assets/gaz.png'),
