@@ -1,10 +1,11 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { getPool } from './db.js';
+import { requireAuth } from './auth.js';
 
 const app = express();
 app.use(cors());
@@ -70,9 +71,60 @@ app.post('/auth/login', async (req, res) => {
   return res.json({ user, token });
 });
 
+const createOrderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1),
+        name: z.string().min(1),
+        unitPrice: z.number().int().nonnegative(),
+        quantity: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
+app.post('/orders', requireAuth, async (req, res) => {
+  const parsed = createOrderSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ message: 'Invalid data' });
+
+  const userId = req.userId;
+  const items = parsed.data.items;
+  const total = items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
+
+  const pool = getPool();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [orderResult] = await conn.execute(
+      'INSERT INTO orders (user_id, total_amount) VALUES (?, ?)',
+      [userId, total],
+    );
+    const orderId = orderResult.insertId;
+
+    for (const it of items) {
+      const lineTotal = it.unitPrice * it.quantity;
+      await conn.execute(
+        'INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, line_total) VALUES (?, ?, ?, ?, ?, ?)',
+        [orderId, it.productId, it.name, it.unitPrice, it.quantity, lineTotal],
+      );
+    }
+
+    await conn.commit();
+    return res.json({ orderId: String(orderId), total });
+  } catch {
+    await conn.rollback();
+    return res.status(500).json({ message: 'Failed to create order' });
+  } finally {
+    conn.release();
+  }
+});
+
 const port = Number(process.env.PORT ?? 3001);
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
 });
+
 
 
