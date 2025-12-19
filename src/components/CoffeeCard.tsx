@@ -24,7 +24,10 @@ const CoffeeCard: React.FC<Props> = ({ item, onPress, showFavoriteIcon = true, s
 
   const handleFavoritePress = (e: any) => {
     e.stopPropagation(); // Empêcher le déclenchement de onPress de la carte
-    toggleFavorite(item);
+    toggleFavorite(item).catch((error) => {
+      // Erreur silencieuse - la mise à jour optimiste a déjà été annulée dans le contexte
+      console.error('Error toggling favorite:', error);
+    });
   };
 
   return (

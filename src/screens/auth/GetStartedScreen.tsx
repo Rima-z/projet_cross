@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image } from 'react-native';
+import { StyleSheet, Text, View, Image, ImageBackground } from 'react-native';
 import PrimaryButton from '../../components/PrimaryButton';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../../navigation/AuthStack';
@@ -8,34 +8,44 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'GetStarted'>;
 
 const GetStartedScreen: React.FC<Props> = ({ navigation }) => {
   return (
-    <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <Image
-          source={require('../../../assets/coffee-shop-logo.png')}
-          style={styles.image}
-          resizeMode="contain"
-        />
+    <ImageBackground
+      source={require('../../../assets/background.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <View style={styles.imageContainer}>
+          <Image
+            source={require('../../../assets/coffee-shop-logo.png')}
+            style={styles.image}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.overlay} />
+        <View style={styles.content}>
+          <Text style={styles.title}>Coffee so good, your taste buds will love it</Text>
+          <Text style={styles.subtitle}>
+            The best grain, the finest roast, the most powerful flavor.
+          </Text>
+          <PrimaryButton
+            title="Get started"
+            onPress={() => navigation.navigate('Login')}
+            style={styles.button}
+          />
+        </View>
       </View>
-      <View style={styles.overlay} />
-      <View style={styles.content}>
-        <Text style={styles.title}>Coffee so good, your taste buds will love it</Text>
-        <Text style={styles.subtitle}>
-          The best grain, the finest roast, the most powerful flavor.
-        </Text>
-        <PrimaryButton
-          title="Get started"
-          onPress={() => navigation.navigate('Login')}
-          style={styles.button}
-        />
-      </View>
-    </View>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#C98A4B',
     justifyContent: 'flex-end',
   },
   imageContainer: {

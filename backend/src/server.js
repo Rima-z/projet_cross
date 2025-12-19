@@ -121,6 +121,80 @@ app.post('/orders', requireAuth, async (req, res) => {
   }
 });
 
+// Favorites endpoints
+app.get('/favorites', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const pool = getPool();
+    const [rows] = await pool.execute(
+      'SELECT product_id FROM favorites WHERE user_id = ? ORDER BY created_at DESC',
+      [userId],
+    );
+    const productIds = rows.map((row) => row.product_id);
+    return res.json({ favorites: productIds });
+  } catch (error) {
+    console.error('Error fetching favorites:', error);
+    return res.status(500).json({ message: 'Failed to fetch favorites' });
+  }
+});
+
+const addFavoriteSchema = z.object({
+  productId: z.string().min(1),
+});
+
+app.post('/favorites', requireAuth, async (req, res) => {
+  const parsed = addFavoriteSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ message: 'Invalid data' });
+
+  try {
+    const userId = req.userId;
+    const { productId } = parsed.data;
+    const pool = getPool();
+
+    // Vérifier si le favori existe déjà
+    const [existing] = await pool.execute(
+      'SELECT id FROM favorites WHERE user_id = ? AND product_id = ? LIMIT 1',
+      [userId, productId],
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'Favorite already exists' });
+    }
+
+    await pool.execute('INSERT INTO favorites (user_id, product_id) VALUES (?, ?)', [
+      userId,
+      productId,
+    ]);
+
+    return res.json({ message: 'Favorite added successfully' });
+  } catch (error) {
+    console.error('Error adding favorite:', error);
+    return res.status(500).json({ message: 'Failed to add favorite' });
+  }
+});
+
+app.delete('/favorites/:productId', requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { productId } = req.params;
+    const pool = getPool();
+
+    const [result] = await pool.execute(
+      'DELETE FROM favorites WHERE user_id = ? AND product_id = ?',
+      [userId, productId],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Favorite not found' });
+    }
+
+    return res.json({ message: 'Favorite removed successfully' });
+  } catch (error) {
+    console.error('Error removing favorite:', error);
+    return res.status(500).json({ message: 'Failed to remove favorite' });
+  }
+});
+
 const port = Number(process.env.PORT ?? 3001);
 app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
