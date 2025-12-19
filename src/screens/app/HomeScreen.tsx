@@ -19,11 +19,26 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<Category>('coffee');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const categories = getAllCategories();
   
   // Filtrer les produits selon la catégorie sélectionnée
   const filteredProducts = getProductsByCategory(selectedCategory);
   const allProducts = getAllProducts();
+
+  // Fonction de recherche : filtre les produits par nom (insensible à la casse)
+  const searchProducts = (query: string): Coffee[] => {
+    if (!query.trim()) {
+      return [];
+    }
+    const lowerQuery = query.toLowerCase().trim();
+    return allProducts.filter(product =>
+      product.name.toLowerCase().includes(lowerQuery)
+    );
+  };
+
+  const searchResults = searchProducts(searchQuery);
+  const isSearchActive = searchQuery.trim().length > 0;
 
   const handlePressCoffee = (item: Coffee) => {
     navigation.navigate('ProductDetail', { id: item.id });
@@ -31,6 +46,10 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleCategoryPress = (category: Category) => {
     setSelectedCategory(category);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
   };
 
   return (
@@ -50,61 +69,110 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         <View style={styles.searchBox}>
-          <TextInput placeholder="Search coffee..." style={styles.searchInput} />
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            placeholder="Rechercher un produit..."
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#999999"
+          />
+          {isSearchActive && (
+            <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
+              <Text style={styles.clearIcon}>✕</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.filterIcon}>☰</Text>
         </View>
 
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesRow}
-        >
-          {categories.map(category => (
-            <CategoryChip
-              key={category}
-              label={category.charAt(0).toUpperCase() + category.slice(1)}
-              active={selectedCategory === category}
-              onPress={() => handleCategoryPress(category)}
-            />
-          ))}
-        </ScrollView>
-
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {filteredProducts.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12 }}
-            >
-              {filteredProducts.map(item => (
-                <CoffeeCard key={item.id} item={item} onPress={() => handlePressCoffee(item)} />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                Aucun produit disponible dans cette catégorie pour le moment.
-              </Text>
-              <Text style={styles.emptySubtext}>
-                Ajoutez des produits dans {selectedCategory} pour les voir ici.
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Special Offer</Text>
-            <Text style={styles.sectionSeeAll}>See all</Text>
-          </View>
-
-          <ScrollView
-            horizontal
+        {!isSearchActive && (
+          <ScrollView 
+            horizontal 
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
+            contentContainerStyle={styles.categoriesRow}
           >
-            {allProducts.map(item => (
-              <CoffeeCard key={item.id} item={item} onPress={() => handlePressCoffee(item)} />
+            {categories.map(category => (
+              <CategoryChip
+                key={category}
+                label={category.charAt(0).toUpperCase() + category.slice(1)}
+                active={selectedCategory === category}
+                onPress={() => handleCategoryPress(category)}
+              />
             ))}
           </ScrollView>
+        )}
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {isSearchActive ? (
+            // Afficher les résultats de recherche
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Résultats de recherche "{searchQuery}"
+                </Text>
+                <Text style={styles.resultCount}>{searchResults.length} résultat(s)</Text>
+              </View>
+              {searchResults.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}
+                >
+                  {searchResults.map(item => (
+                    <CoffeeCard key={item.id} item={item} onPress={() => handlePressCoffee(item)} />
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>
+                    Aucun produit trouvé pour "{searchQuery}"
+                  </Text>
+                  <Text style={styles.emptySubtext}>
+                    Essayez avec un autre terme de recherche
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            // Affichage normal par catégorie
+            <>
+              {filteredProducts.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12 }}
+                >
+                  {filteredProducts.map(item => (
+                    <CoffeeCard key={item.id} item={item} onPress={() => handlePressCoffee(item)} />
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>
+                    Aucun produit disponible dans cette catégorie pour le moment.
+                  </Text>
+                  <Text style={styles.emptySubtext}>
+                    Ajoutez des produits dans {selectedCategory} pour les voir ici.
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Special Offer</Text>
+                <Text style={styles.sectionSeeAll}>See all</Text>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
+              >
+                {allProducts.map(item => (
+                  <CoffeeCard key={item.id} item={item} onPress={() => handlePressCoffee(item)} />
+                ))}
+              </ScrollView>
+            </>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -184,13 +252,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  searchIcon: {
+    marginRight: 8,
+    fontSize: 16,
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
+    color: '#222222',
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  clearIcon: {
+    fontSize: 16,
+    color: '#999999',
   },
   filterIcon: {
     marginLeft: 12,
     fontSize: 18,
+  },
+  resultCount: {
+    fontSize: 12,
+    color: '#777777',
   },
   categoriesRow: {
     flexDirection: 'row',
